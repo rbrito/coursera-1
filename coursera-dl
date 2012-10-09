@@ -172,8 +172,9 @@ def parse_syllabus(page, cookies_file):
       for a in vtag.findAll('a'):
         href = a['href']
         format = get_anchor_format(href)
-        print "    ", format, href
-        if format: lecture[format] = href
+        if format:
+          lecture[format] = href
+          print "    ", format, href
 
       # Special case: we possibly have hidden video links---thanks to the
       # University of Washington for that.
