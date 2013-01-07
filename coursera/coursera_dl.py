@@ -272,8 +272,8 @@ def download_file_wget(wget_bin, url, fn, cookies_file):
   Downloads a file using wget.  Could possibly use python to stream files to
   disk, but wget is robust and gives nice visual feedback.
   """
-  cmd = [wget_bin, url, "-O", fn, "--load-cookies", cookies_file, "--no-check-certificate"]
-  print "Executing wget:", cmd
+  cmd = [wget_bin, url, "-o", fn, "--load-cookies", cookies_file, "--check-certificate=false", "--log-level=info"]
+  #print "Executing wget:", cmd
   subprocess.call(cmd)
 
 def download_file_curl(curl_bin, url, fn, cookies_file):
