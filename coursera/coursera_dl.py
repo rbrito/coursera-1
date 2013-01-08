@@ -300,7 +300,7 @@ def download_file_nowget(url, fn, cookies_file):
     bytesread = 0
     f = open(fn, "wb")
     while True:
-	data = urlfile.read(chunk_sz)
+        data = urlfile.read(chunk_sz)
         if not data:
           print "."
           break
