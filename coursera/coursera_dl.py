@@ -176,7 +176,8 @@ def parse_syllabus(page, cookies_file):
         href = a['href']
         fmt = get_anchor_format(href)
         print "    ", fmt, href
-        if fmt: lecture[fmt] = href
+        if fmt:
+          lecture[fmt] = href
 
       # Special case: we possibly have hidden video links---thanks to the
       # University of Washington for that.
