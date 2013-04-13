@@ -54,6 +54,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import requests
 import urllib
 import urllib2
 
@@ -130,68 +131,44 @@ def write_cookie_file(className, username, password):
     """
     Automatically generate a cookie file for the Coursera site.
     """
-    try:
-        global csrftoken
-        global session
-        hn, fn = tempfile.mkstemp()
-        cookies = cookielib.LWPCookieJar()
-        handlers = [
-            urllib2.HTTPHandler(),
-            urllib2.HTTPSHandler(),
-            urllib2.HTTPCookieProcessor(cookies)
-        ]
-        opener = urllib2.build_opener(*handlers)
+    global csrftoken
+    global session
 
-        req = urllib2.Request(get_syllabus_url(className))
-        opener.open(req)
+    s = requests.Session()
+    r = s.get(get_syllabus_url(className))
 
-        for cookie in cookies:
-            if cookie.name == 'csrf_token':
-                csrftoken = cookie.value
-                break
-        opener.close()
+    csrftoken = r.cookies['csrf_token']
 
-        # Now make a call to the authenticator url:
-        cj = cookielib.MozillaCookieJar(fn)
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj),
-                                      urllib2.HTTPHandler(),
-                                      urllib2.HTTPSHandler())
+    # The next data will be sent in a POST request.
+    std_headers = {
+        'Cookie': ('csrftoken=%s' % csrftoken),
+        'Referer': 'https://www.coursera.org',
+        'X-CSRFToken': csrftoken,
+        }
 
-        # Preparation of headers and of data that we will send in a POST
-        # request.
-        std_headers = {
-            'Cookie': ('csrftoken=%s' % csrftoken),
-            'Referer': 'https://www.coursera.org',
-            'X-CSRFToken': csrftoken,
-            }
+    s.headers.update(std_headers)
 
-        auth_data = {
-            'email_address': username,
-            'password': password
-            }
+    auth_data = {
+        'email_address': username,
+        'password': password
+        }
 
-        formatted_data = urllib.urlencode(auth_data)
+    r = requests.post(NEW_AUTH_URL, data=auth_data)
 
-        req = urllib2.Request(NEW_AUTH_URL, formatted_data, std_headers)
+    if r.status_code == 404:
+        raise ClassNotFound(className)
+    else:
+        raise ClassNotFound('Error %d with %s' %(r.status_code, className))
 
-        opener.open(req)
-    except urllib2.HTTPError as e:
-        if e.code == 404:
-            raise ClassNotFound(className)
-        else:
-            raise
-
-    cj.save()
-    opener.close()
-    os.close(hn)
-    return fn
+    session = s
 
 
 def down_the_wabbit_hole(className, cookies_file):
     """
     Get the session cookie
     """
-    auth_redirector_url = 'https://class.coursera.org/%s/auth/auth_redirector?type=login&subtype=normal&email=&visiting=%s' % (className, urllib.quote_plus(get_syllabus_url(className)))
+    quoted_class_url = urllib.quote_plus(get_syllabus_url(className))
+    auth_redirector_url = 'https://class.coursera.org/%s/auth/auth_redirector?type=login&subtype=normal&email=&visiting=%s' % (className, quoted_class_url)
 
     global session
     cj = get_cookie_jar(cookies_file)
@@ -374,7 +351,18 @@ def get_syllabus(class_name, cookies_file, local_page=False):
     Get the course listing webpage.
     """
 
-    if not (local_page and os.path.exists(local_page)):
+    if local_page:
+        if os.path.exists(local_page):
+            with open(local_page) as f:
+                page = f.read()
+            logging.info('Read (%d bytes) from local file', len(page))
+        else:
+            # we should write the local page here
+            pass
+    else:
+        pass
+
+    if not local_page
         url = get_syllabus_url(class_name)
         down_the_wabbit_hole(class_name, cookies_file)
         page = get_page(url, cookies_file)
